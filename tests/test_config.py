@@ -133,3 +133,9 @@ right = []
 ''')
     r = Resolver(cfg, _registry_with_core_button(), lambda mid: None)
     assert isinstance(r.widget("a"), BrokenWidget)
+
+
+def test_group_toggle_defaults_off_and_parses():
+    from macarchy_touchbar.config import Config
+    c = Config.parse('[groups.a]\nitems = []\n[groups.b]\nitems = []\ntoggle = true\n[layouts.default]\nleft = []\n')
+    assert not c.groups["a"].toggle and c.groups["b"].toggle

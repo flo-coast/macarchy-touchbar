@@ -14,6 +14,7 @@ from .scenes import Scene, SceneStack
 from .widgets import Button
 
 REDRAW_MIN_INTERVAL = 1 / 30
+PRESS_MIN_SHOWN = 0.2        # a quick tap still shows the pressed colour this long
 
 
 class Bar:
@@ -217,6 +218,7 @@ class Bar:
             self._pressed, self._capture = w, None
             if w:
                 w.pressed = True
+                w._pressed_at = self.now()
                 w.on_press(g.x, g.y)
                 self.invalidate(w)
         elif g.kind in ("tap", "long_press"):
@@ -237,13 +239,21 @@ class Bar:
                 self.invalidate(target)
         elif g.kind == "release":
             seen = []
-            for w in (self._pressed, self._capture):
+            done, self._pressed, self._capture = (self._pressed, self._capture), None, None
+            for w in done:
                 if w and not any(w is s for s in seen):
                     seen.append(w)
-                    w.pressed = False
                     w.on_release()
-                    self.invalidate(w)
-            self._pressed = self._capture = None
+                    left = PRESS_MIN_SHOWN - (self.now() - getattr(w, "_pressed_at", 0.0))
+                    if left > 0:
+                        self.loop.after(left, lambda w=w: self._unpress(w))
+                    else:
+                        self._unpress(w)
+
+    def _unpress(self, w):
+        if w is not self._pressed:      # pressed again meanwhile: that touch unpresses it
+            w.pressed = False
+            self.invalidate(w)
 
     def keys(self, names):
         if self.keyboard:
