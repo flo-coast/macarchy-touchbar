@@ -59,7 +59,9 @@ def test_tap_opens_group_and_close_button_closes_it():
     x = gb.rect.x + 5
     bar.gesture(Gesture("press", x, 30)); assert gb.pressed
     bar.gesture(Gesture("tap", x, 30)); bar.gesture(Gesture("release", x, 30))
-    assert bar.is_group_open("g") and not gb.pressed
+    assert bar.is_group_open("g")
+    t[0] = 0.25; loop.step(timeout=0)
+    assert not gb.pressed
     close = bar.current_layout().left.widgets[0]
     assert isinstance(bar.current_layout().left.widgets[1], Slider)
     cx = close.rect.x + 5
@@ -181,3 +183,25 @@ def test_wake_pokes_the_backlight_only_when_there_is_one():
     bar.backlight = Backlight()
     bar.wake()
     assert bar.backlight.touches == 1
+
+
+def test_quick_tap_stays_visibly_pressed_for_a_moment():
+    t = [0.0]
+    bar, out, loop = make_bar(t)
+    a = bar.current_layout().left.widgets[0]
+    x = a.rect.x + 5
+    bar.gesture(Gesture("press", x, 30)); bar.gesture(Gesture("tap", x, 30)); bar.gesture(Gesture("release", x, 30))
+    assert a.pressed                           # a 0 ms tap would otherwise never show
+    t[0] = 0.1; loop.step(timeout=0); assert a.pressed
+    t[0] = 0.25; loop.step(timeout=0); assert not a.pressed
+
+
+def test_long_hold_unpresses_right_away():
+    t = [0.0]
+    bar, out, loop = make_bar(t)
+    a = bar.current_layout().left.widgets[0]
+    x = a.rect.x + 5
+    bar.gesture(Gesture("press", x, 30))
+    t[0] = 1.0
+    bar.gesture(Gesture("long_press", x, 30)); bar.gesture(Gesture("release", x, 30))
+    assert not a.pressed
