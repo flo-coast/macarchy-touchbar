@@ -21,7 +21,7 @@ class Config:
         self.groups = {}
         for name, g in data.get("groups", {}).items():
             self.groups[name] = Group(name, icon=g.get("icon"), text=g.get("text"), items=g.get("items", []),
-                                      slide_into=g.get("slide_into"),
+                                      slide_into=g.get("slide_into"), toggle=g.get("toggle", False),
                                       timeout=g.get("timeout", self.settings["group_timeout"]))
         layouts = data.get("layouts", {})
         self.fn = layouts.get("fn", {}).get("buttons") if "fn" in layouts else None
@@ -104,8 +104,11 @@ class Resolver:
 
     def group_row(self, name):
         g = self.config.groups[name]
+        items = [self.widget(r) for r in g.items]
+        if g.toggle:
+            return Row(items)
         close = self._make("core.button", {"icon": "close", "close": True})
-        return Row([close] + [self.widget(r) for r in g.items])
+        return Row([close] + items)
 
     def layout(self, cls, title):
         _name, left, right = self.config.pick(cls, title)

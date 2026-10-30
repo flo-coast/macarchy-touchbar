@@ -3,8 +3,9 @@ from .widgets import Button
 
 
 class Group:
-    def __init__(self, name, icon=None, items=(), slide_into=None, timeout=15, text=None):
+    def __init__(self, name, icon=None, items=(), slide_into=None, timeout=15, text=None, toggle=False):
         self.name, self.icon, self.text = name, icon, text
+        self.toggle = bool(toggle)       # tapping the group button again closes it; no close button
         self.items, self.slide_into, self.timeout = list(items), slide_into, float(timeout)
 
 
@@ -26,7 +27,10 @@ class GroupButton(Button):
         self._slid = False
 
     def on_tap(self, x, y):
-        self.api.open_group(self.group.name)
+        if self.group.toggle and self.is_active():
+            self.api.close_group()
+        else:
+            self.api.open_group(self.group.name)
 
     def on_drag(self, x, y):
         if self.group.slide_into and not self._slid:

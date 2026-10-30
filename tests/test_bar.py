@@ -205,3 +205,19 @@ def test_long_hold_unpresses_right_away():
     t[0] = 1.0
     bar.gesture(Gesture("long_press", x, 30)); bar.gesture(Gesture("release", x, 30))
     assert not a.pressed
+
+
+def test_toggle_group_closes_on_a_second_tap_and_has_no_close_button():
+    t = [0.0]
+    bar, out, loop = make_bar(t)
+    bar.config.groups["g"].toggle = True
+    gb = bar.current_layout().right.widgets[0]
+    x = gb.rect.x + 5
+    bar.gesture(Gesture("press", x, 30)); bar.gesture(Gesture("tap", x, 30)); bar.gesture(Gesture("release", x, 30))
+    assert bar.is_group_open("g")
+    assert isinstance(bar.current_layout().left.widgets[0], Slider)     # no close button in front
+    gb = next(w for w in bar.current_layout().right.widgets if getattr(w, "group", None))
+    x = gb.rect.x + 5
+    t[0] = 1.0
+    bar.gesture(Gesture("press", x, 30)); bar.gesture(Gesture("tap", x, 30)); bar.gesture(Gesture("release", x, 30))
+    assert not bar.is_group_open("g")
