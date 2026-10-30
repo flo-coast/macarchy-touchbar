@@ -19,6 +19,12 @@ def finger(x, y, tid=7, t=1.0):
             + ev(EV_KEY, BTN_TOUCH, 1, t) + ev(EV_SYN, 0, 0, t))
 
 
+def finger_in_slot(slot, x, y, tid=7, t=1.0):
+    return (ev(EV_ABS, ABS_MT_SLOT, slot, t) + ev(EV_ABS, ABS_MT_TRACKING_ID, tid, t)
+            + ev(EV_ABS, ABS_MT_POSITION_X, x, t) + ev(EV_ABS, ABS_MT_POSITION_Y, y, t)
+            + ev(EV_KEY, BTN_TOUCH, 1, t) + ev(EV_SYN, 0, 0, t))
+
+
 def lift(t=1.2):
     return ev(EV_ABS, ABS_MT_TRACKING_ID, -1, t) + ev(EV_KEY, BTN_TOUCH, 0, t) + ev(EV_SYN, 0, 0, t)
 
@@ -93,3 +99,21 @@ def test_find_touch_device_reads_event_right_after_handlers(monkeypatch):
                'I: Bus=0003\nN: Name="Apple Inc. Touch Bar Display Virtual"\nH: Handlers=event9\n')
     monkeypatch.setattr(touch, "open", lambda *a, **k: io.StringIO(devices), raising=False)
     assert touch.find_touch_device() == "/dev/input/event7"
+
+
+def test_first_finger_in_a_high_slot_is_followed():
+    # the T2 Touch Bar hands out slots from 8 up, slot 0 never shows up
+    r = TouchReader(None, xrange=(0, 20000), yrange=(0, 600))
+    assert [e.kind for e in r.feed(finger_in_slot(8, 10000, 300))] == ["down"]
+    evs = r.feed(ev(EV_ABS, ABS_MT_POSITION_X, 15000, 1.1) + ev(EV_SYN, 0, 0, 1.1))
+    assert evs[0].kind == "move" and evs[0].x == 1505
+    assert r.feed(lift())[0].kind == "up"
+
+
+def test_second_finger_lifting_does_not_end_the_first():
+    r = TouchReader(None, xrange=(0, 20000), yrange=(0, 600))
+    r.feed(finger_in_slot(8, 1000, 300))
+    r.feed(finger_in_slot(9, 19000, 300, tid=8))
+    assert r.feed(ev(EV_ABS, ABS_MT_TRACKING_ID, -1) + ev(EV_SYN, 0, 0)) == []
+    r.feed(ev(EV_ABS, ABS_MT_SLOT, 8))
+    assert r.feed(lift())[0].kind == "up"

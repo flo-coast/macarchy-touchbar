@@ -51,6 +51,7 @@ class TouchReader:
         self.xmin, self.xmax = xrange
         self.ymin, self.ymax = yrange
         self.slot = 0
+        self.active = None       # slot of the finger we follow; T2 numbers slots from 8 up, not 0
         self.down = False
         self.x = self.y = 0
         self.pending = None      # 'down' | 'move' | 'up' to emit at SYN
@@ -86,13 +87,14 @@ class TouchReader:
             self.buf = self.buf[_SZ:]
             if typ == EV_ABS and code == ABS_MT_SLOT:
                 self.slot = val
-            elif self.slot != 0:
-                continue
             elif typ == EV_ABS and code == ABS_MT_TRACKING_ID:
                 if val >= 0 and not self.down:
+                    self.active = self.slot
                     self.down, self.pending = True, "down"
-                elif val < 0 and self.down:
+                elif val < 0 and self.down and self.slot == self.active:
                     self.down, self.pending = False, "up"
+            elif self.slot != self.active:
+                continue
             elif typ == EV_ABS and code == ABS_MT_POSITION_X:
                 self.x = val
                 self.pending = self.pending or ("move" if self.down else None)
