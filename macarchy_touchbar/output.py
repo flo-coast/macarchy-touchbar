@@ -235,4 +235,8 @@ class DrmOutput(Output):
             self.lib.drmModeRmFB(self.fd, self.fb)
             self.lib.drmDropMaster(self.fd)
         finally:
+            # the mapping pins the DRM file: a process that lives on after close() would keep the
+            # card open, and tiny-dfr can't take the Touch Bar back
+            self._portrait.finish()
+            self.mm.close()
             os.close(self.fd)

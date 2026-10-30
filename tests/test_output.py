@@ -112,3 +112,36 @@ def test_find_card_says_what_it_looked_at_when_no_touch_bar_is_present():
     with pytest.raises(OSError) as e:
         _find_card(lib, ["/dev/dri/card3"], opener=lambda p: 12, closer=lambda fd: None)
     assert "2560x1600" in str(e.value) and "card3" in str(e.value)
+
+
+class _FlushLib:
+    def __init__(self):
+        self.clips = []
+
+    def drmModeDirtyFB(self, fd, fb, clip, n):
+        c = clip._obj
+        self.clips.append((c.x1, c.y1, c.x2, c.y2))
+        return 0
+
+    def drmModeRmFB(self, fd, fb):
+        return 0
+
+    def drmDropMaster(self, fd):
+        return 0
+
+
+def _fake_drm_output():
+    import mmap
+    from types import SimpleNamespace
+    mode = SimpleNamespace(hdisplay=60, vdisplay=2008)
+    mm = mmap.mmap(-1, 64 * 4 * 2008)
+    return DrmOutput(os.open(os.devnull, os.O_RDWR), _FlushLib(), 1, 1, mode, 1, mm, 64 * 4)
+
+
+def test_close_unmaps_the_buffer_and_closes_the_card():
+    out = _fake_drm_output()
+    fd, mm = out.fd, out.mm
+    out.close()
+    assert mm.closed
+    with pytest.raises(OSError):
+        os.fstat(fd)
