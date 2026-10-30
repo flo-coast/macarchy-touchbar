@@ -39,6 +39,7 @@ def find_touch_device():
         if "Touch Bar" not in block or "Virtual" in block:
             continue
         for tok in block.split():
+            tok = tok.rpartition("=")[2]     # "Handlers=event7" when event comes first
             if tok.startswith("event"):
                 return f"/dev/input/{tok}"
     return None

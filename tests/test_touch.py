@@ -83,3 +83,13 @@ def test_reader_stamps_events_on_the_monotonic_clock():
         rec.feed(ev_)
     assert abs(rec.deadline() - time.monotonic()) < 1.0
     assert g(rec.tick(time.monotonic() + 0.6)) == ["long_press"]
+
+
+def test_find_touch_device_reads_event_right_after_handlers(monkeypatch):
+    import io
+    from macarchy_touchbar import touch
+    devices = ('I: Bus=0003 Vendor=05ac Product=8302\nN: Name="Apple Inc. Touch Bar Display Touchpad"\n'
+               'H: Handlers=event7 mouse2\n\n'
+               'I: Bus=0003\nN: Name="Apple Inc. Touch Bar Display Virtual"\nH: Handlers=event9\n')
+    monkeypatch.setattr(touch, "open", lambda *a, **k: io.StringIO(devices), raising=False)
+    assert touch.find_touch_device() == "/dev/input/event7"
