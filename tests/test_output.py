@@ -145,3 +145,14 @@ def test_close_unmaps_the_buffer_and_closes_the_card():
     assert mm.closed
     with pytest.raises(OSError):
         os.fstat(fd)
+
+
+def test_flush_sends_the_whole_frame_even_for_a_small_rect():
+    from macarchy_touchbar.geometry import Rect
+    out = _fake_drm_output()
+    out.flush(Rect(100, 0, 50, 60))
+    assert out.lib.clips == [(0, 0, 60, 2008)]
+    out.full_frames = False
+    out.flush(Rect(100, 0, 50, 60))
+    assert out.lib.clips[-1] == (0, 100, 60, 150)
+    out.close()

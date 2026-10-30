@@ -186,6 +186,11 @@ def _find_card(lib, paths, opener=None, closer=None):
 
 
 class DrmOutput(Output):
+    # Whole frames only. appletbdrm (T2 Touch Bar) wedges after a few seconds of quick small
+    # partial updates: DirtyFB then fails, the kernel logs "Failed to read response (-110)" and
+    # the panel needs a USB reset. tiny-dfr also always sends the full frame.
+    full_frames = True
+
     def __init__(self, fd, lib, crtc, conn_id, mode, fb, mm, pitch):
         super().__init__(mode.vdisplay, mode.hdisplay)      # landscape = (2008, 60)
         self.fd, self.lib, self.crtc, self.conn_id, self.mode = fd, lib, crtc, conn_id, mode
@@ -223,11 +228,14 @@ class DrmOutput(Output):
 
     def flush(self, rect=None):
         self.rotated(rect)
-        if rect:
+        if rect and not self.full_frames:
             clip = _Clip(self.height - rect.bottom, rect.x, self.height - rect.y, rect.right)
         else:
             clip = _Clip(0, 0, self.height, self.width)
-        self.lib.drmModeDirtyFB(self.fd, self.fb, C.byref(clip), 1)
+        err = self.lib.drmModeDirtyFB(self.fd, self.fb, C.byref(clip), 1)
+        if err and not getattr(self, "_dirty_failed", False):
+            self._dirty_failed = True       # say it once: the panel stopped taking frames
+            log(f"frame did not reach the Touch Bar (DirtyFB {err}), rect {rect}")
 
     def close(self):
         try:
