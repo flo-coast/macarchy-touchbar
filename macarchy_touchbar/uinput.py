@@ -78,6 +78,7 @@ class VirtualKeyboard:
             for c in codes:
                 self._emit(EV_KEY, c, 1)
             self._emit(EV_SYN, 0, 0)
+            time.sleep(0.04)            # games poll input per frame and miss a 0 ms press
             for c in reversed(codes):
                 self._emit(EV_KEY, c, 0)
             self._emit(EV_SYN, 0, 0)
