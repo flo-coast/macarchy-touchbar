@@ -241,3 +241,24 @@ def test_toggle_group_in_the_left_zone_brings_its_button_along():
     t[0] = 1.0
     bar.gesture(Gesture("press", x, 30)); bar.gesture(Gesture("tap", x, 30)); bar.gesture(Gesture("release", x, 30))
     assert not bar.is_group_open("g")
+
+
+def test_keys_with_steps_are_pressed_one_after_another():
+    t = [0.0]
+    bar, out, loop = make_bar(t)
+    pressed = []
+
+    class Kb:
+        def press(self, names):
+            pressed.append((t[0], list(names)))
+    bar.keyboard = Kb()
+    bar.keys(["LeftCtrl", "LeftShift", "H", ">", "SysRq", ">", "LeftCtrl", "LeftShift", "H"])
+    assert pressed == [(0.0, ["LeftCtrl", "LeftShift", "H"])]
+    t[0] = 0.3
+    loop.step(0)
+    assert pressed[-1] == (0.3, ["SysRq"])
+    t[0] = 0.6
+    loop.step(0)
+    assert pressed[-1] == (0.6, ["LeftCtrl", "LeftShift", "H"]) and len(pressed) == 3
+    bar.keys(["M"])
+    assert pressed[-1] == (0.6, ["M"])

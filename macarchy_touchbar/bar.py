@@ -261,11 +261,26 @@ class Bar:
             w.pressed = False
             self.invalidate(w)
 
+    KEY_STEP_GAP = 0.25     # s between the steps of a sequence ("a > b"); a game needs a frame or two
+
     def keys(self, names):
-        if self.keyboard:
-            self.keyboard.press(names)
-        else:
+        """Press keys together. ">" splits them into steps pressed one after another, like
+        ["LeftCtrl", "H", ">", "SysRq"]: hide the UI, then take a screenshot."""
+        if not self.keyboard:
             log("no virtual keyboard; dropped", names)
+            return
+        steps = [[]]
+        for n in names:
+            if n == ">":
+                steps.append([])
+            else:
+                steps[-1].append(n)
+        steps = [s for s in steps if s]
+        for i, step in enumerate(steps):
+            if i == 0:
+                self.keyboard.press(step)
+            else:
+                self.loop.after(i * self.KEY_STEP_GAP, lambda step=step: self.keyboard.press(step))
 
     # --- fallback api (Bar is the api for widgets whose module has none) -------
     def run_detached(self, cmd):
