@@ -221,3 +221,23 @@ def test_toggle_group_closes_on_a_second_tap_and_has_no_close_button():
     t[0] = 1.0
     bar.gesture(Gesture("press", x, 30)); bar.gesture(Gesture("tap", x, 30)); bar.gesture(Gesture("release", x, 30))
     assert not bar.is_group_open("g")
+
+
+def test_toggle_group_in_the_left_zone_brings_its_button_along():
+    t = [0.0]
+    bar, out, loop = make_bar(t)
+    g = bar.config.groups["g"]
+    g.toggle = True
+    bar.open_group("g")
+    first = bar.current_layout().left.widgets[0]
+    assert getattr(first, "group", None) is not g        # button visible on the right: nothing added
+    bar.close_group()
+    bar.base.right.widgets[:] = [w for w in bar.base.right.widgets if getattr(w, "group", None) is not g]
+    bar.open_group("g")
+    first = bar.current_layout().left.widgets[0]
+    assert getattr(first, "group", None) is g and first.is_active()
+    bar._layout_now()
+    x = first.rect.x + 5
+    t[0] = 1.0
+    bar.gesture(Gesture("press", x, 30)); bar.gesture(Gesture("tap", x, 30)); bar.gesture(Gesture("release", x, 30))
+    assert not bar.is_group_open("g")

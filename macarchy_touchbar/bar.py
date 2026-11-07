@@ -120,7 +120,13 @@ class Bar:
         if name not in self.config.groups:
             return
         self.open_group_name = name
-        self._group_layout = Layout(self.resolver.group_row(name), self.base.right)
+        row = self.resolver.group_row(name)
+        group = self.config.groups[name]
+        # A toggle group has no close button: its own button closes it. That only works while the button is
+        # visible, so when it sits in the left zone (which the group replaces), the group starts with it.
+        if group.toggle and not any(getattr(w, "group", None) is group for w in self.base.right.widgets):
+            row = Row([self.resolver.widget(f"group:{name}")] + row.widgets)
+        self._group_layout = Layout(row, self.base.right)
         self._group_last_touch = self.now()
         self.invalidate(None)
         self._layout_now()
